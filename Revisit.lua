@@ -59,7 +59,8 @@ function Revisit:new(o)
 		nWidth = 400,
 		nHeight = 400,
 		nOpen = false,
-		nDebug = false,
+		bLocked = false,
+		bDebug= false,
 	}
 	
 	o.nCount = 1
@@ -67,6 +68,15 @@ function Revisit:new(o)
 	o.nFaction = 2
 	
 	o.sName = ""
+	
+	-- see CheckLoadData
+	o.bSettingsLoading = false
+	o.bCharLoaded = false
+	o.bCharSettingsLoaded = false
+	o.bRealmSettingsLoaded = false
+	o.bDataInited = false
+	
+	o.nSettingsPollCount = 0
 	
     return o
 end
@@ -92,39 +102,91 @@ function Revisit:OnSave(eType)
 end
 
 function Revisit:OnRestore(eType, tSavedData)
+	self:DebugPrint(string.format("Revisit:OnRestore: %d",eType))
+	self.bSettingsLoading = true
+	
 	if tSavedData and eType == GameLib.CodeEnumAddonSaveLevel.Character then
 		self.tWindowData = tSavedData
-		return
+		self.bCharSettingsLoaded = true
 	elseif tSavedData and tSavedData.nSaveVersion == knSaveVersion then
 		self.tSavedData = tSavedData
+		self.bRealmSettingsLoaded = true
 	end
 	
-	self.LoadSettingsTimer = ApolloTimer.Create(2.0, true, "OnLoadSettings", self)
 end
 
 function Revisit:OnLoadSettings()
-	-- poll until loaded
+
+	-- HACK
+	--
+	-- we're only going to wait 6 seconds for
+	-- any saved data restoration to start
+	
+	self.nSettingsPollCount = self.nSettingsPollCount + 1	
+	self:DebugPrint(string.format("Revist: waited %d seconds.",2*self.nSettingsPollCount))
+
+	-- check to see if the Player Unit is valid yet
+	-- this can fail in high lag situations like
+	-- first login or joining a PvP instance
 	me = GameLib.GetPlayerUnit()
 	if me == nil then
 		self:DebugPrint("Revisit: Char load wait.")
 		return
 	end
 	
-	self.LoadSettingsTimer:Stop()
+	-- Until CRB comes up with a better way to determine
+	-- when the Restore stage is done I need to poll to
+	-- see if the settings are done.  Will give up after
+	-- 6 seconds.
+	if self.nSettingsPollCount < 3 then
+		if not self.bSettingsLoading then
+			self:DebugPrint("Revisit: Waiting for restore to start.")
+			return
+		end
 	
+		if not self.bCharSettingsLoaded then
+			self:DebugPrint("Revisit: Waiting for char level settings to restore.")
+			return
+		end
+	
+		if not self.bRealmSettingsLoaded then
+			self:DebugPrint("Revisit: Waiting for realm level settings to restore.")
+			return
+		end
+	end
+	
+	self.LoadSettingsTimer:Stop()
+
 	self.sName = me:GetName()
 	
 	if me:GetFaction() ~= Unit.CodeEnumFaction.DominionPlayer then
 		self.nFaction = 1
 	end
 	
-	self:DebugPrint(string.format("Revisit: %d",self.nFaction))
+	self:DebugPrint(string.format("Revisit: Faction=%d",self.nFaction))
 	
-	self:UpdateFriendGrid()
+	-- Load data
+	-- self.bCharLoaded = true
+	-- self:CheckDataInitialized()
 
+	self:DebugPrint("Revisit:OnLoadSettings: Running!")
+	
+	self:InitSettings()
+	self:UpdateFriendGrid()
+	
+	-- Put the main Window back where it was
 	self.wndMain:Move(self.tWindowData.nLeft,self.tWindowData.nTop,self.tWindowData.nWidth,self.tWindowData.nHeight)
 
+	-- Center the Settings Window
+	-- 350w 280h
+	local t = Apollo.GetDisplaySize()
+	self.wndSettings:Move((t.nWidth-350)/2,(t.nHeight-280)/2,350,280)
+	
 	self:CheckOpen()
+	
+	self.bDataInited = true
+	
+	Print("Revisit Loaded")
 end
 
 -----------------------------------------------------------------------------------------------
@@ -148,10 +210,17 @@ function Revisit:OnDocLoaded()
 			return
 		end
 		
+		self.wndSettings = Apollo.LoadForm(self.xmlDoc, "ConfigForm", nil, self)
+		if self.wndSettings == nil then
+			Apollo.AddAddonErrorText(self, "Could not load the settings window for some reason.")
+			return
+		end
+		
 	    self.wndMain:Show(false, true)
+	    self.wndSettings:Show(false, true)
 
 		-- if the xmlDoc is no longer needed, you should set it to nil
-		-- self.xmlDoc = nil
+		self.xmlDoc = nil
 		
 		-- Register handlers for events, slash commands and timer, etc.
 		-- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
@@ -159,6 +228,15 @@ function Revisit:OnDocLoaded()
 		Apollo.RegisterSlashCommand("revisit", "OnRevisitOn", self)
 
 		-- Do additional Addon initialization here
+		self.friendGrid = self.wndMain:FindChild("FriendsGrid")
+		self.settingsPane = self.wndMain:FindChild("SettingsPane")
+		
+		-- be a lil noisy
+		Print("Revisit is loading.")
+		
+		-- Load data
+		self.LoadSettingsTimer = ApolloTimer.Create(2.0, true, "OnLoadSettings", self)
+		
 	end
 end
 
@@ -168,7 +246,7 @@ end
 -- Define general functions here
 
 function Revisit:DebugPrint(sMessage)
-	if self.tWindowData.nDebug == true then
+	if self.tWindowData.bDebug== true then
 		Print(sMessage)
 	end
 end
@@ -264,6 +342,15 @@ function Revisit:Remove(sOwner)
 	end
 end
 
+function Revisit:InitSettings()
+	local debugCB = self.wndSettings:FindChild("DebugCB")
+	local lockCB = self.wndSettings:FindChild("LockCB")
+	
+	debugCB:SetCheck((self.tWindowData.bDebug == true))
+	lockCB:SetCheck((self.tWindowData.bLock == true))
+	self:SetLock((self.tWindowData.bLock == true))
+end
+
 function Revisit:UpdateFriendGrid()
 	local flist = {}
 	for n in pairs(self.tSavedData.friendList[self.nFaction]) do
@@ -272,20 +359,19 @@ function Revisit:UpdateFriendGrid()
 	
 	table.sort(flist)
 	
-	local friendGrid = self.wndMain:FindChild("FriendsGrid")
-	friendGrid:DeleteAll()
+	self.friendGrid:DeleteAll()
 	
 	self.nCount=1
 	for i,v in ipairs(flist) do
 		if self.sName ~= v then
-			friendGrid:AddRow("")
-			friendGrid:SetCellText(self.nCount,1,v)
+			self.friendGrid:AddRow("")
+			self.friendGrid:SetCellText(self.nCount,1,v)
 			self.nCount=self.nCount+1
 		end
 	end
 	
 	-- TODO: Restore the selected name if it still exists?
-	friendGrid:SetCurrentRow(1)
+	self.friendGrid:SetCurrentRow(1)
 	
 end
 
@@ -294,15 +380,14 @@ end
 -----------------------------------------------------------------------------------------------
 -- when the OK button is clicked
 function Revisit:OnVisit()
-	local friendGrid = self.wndMain:FindChild("FriendsGrid")
 	
-	row = friendGrid:GetCurrentRow()
+	row = self.friendGrid:GetCurrentRow()
 	if row == nil then
 		
 	self:DebugPrint("Revisit:OnVisit: row is nil")
 	
 	else
-		sFriend = friendGrid:GetCellText(row,1)
+		sFriend = self.friendGrid:GetCellText(row,1)
 		self:DebugPrint(string.format("Revisit:OnVisit: %s",sFriend))
 
 		HousingLib.RequestVisitPlayer(sFriend)
@@ -321,6 +406,21 @@ end
 
 function Revisit:OnHome( wndHandler, wndControl, eMouseButton )
 	HousingLib.RequestTakeMeHome()
+end
+
+function Revisit:OnSettings( wndHandler, wndControl, eMouseButton )
+	local bOpen = self.wndSettings:IsShown()
+	self.wndSettings:Show((not bOpen),true)
+	self:DebugPrint("Revisit:OnSettings")
+end
+
+function Revisit:OnVisitBox( wndHandler, wndControl, eMouseButton )
+	self:DebugPrint("Revisit:OnVisitBox")
+	
+	local t = Apollo.GetDisplaySize()
+	for k,v in pairs(t) do
+		Print(string.format("Revisit:GDS: key: %s, val: %s",k,v))
+	end
 end
 
 function Revisit:OnAdd( wndHandler, wndControl, eMouseButton )
@@ -349,6 +449,28 @@ function Revisit:OnRemove( wndHandler, wndControl, eMouseButton )
 		self:DebugPrint(string.format("Revisit: removing %s",sFriend))
 		self:Remove(sFriend)
 	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- ConfigForm Functions
+---------------------------------------------------------------------------------------------------
+
+function Revisit:OnSettingsCancel( wndHandler, wndControl, eMouseButton )
+	self.wndSettings:Show(false,true)
+end
+
+function Revisit:OnDebugChange( wndHandler, wndControl, eMouseButton )
+	self.tWindowData.bDebug = wndControl:IsChecked()
+end
+
+function Revisit:SetLock(bVal)
+	self.tWindowData.bLock = bVal
+	self.wndMain:SetStyle("Moveable",(not self.tWindowData.bLock))
+	self.wndMain:SetStyle("Sizable",(not self.tWindowData.bLock))
+end
+
+function Revisit:OnLockChange( wndHandler, wndControl, eMouseButton )
+	self:SetLock(wndControl:IsChecked())
 end
 
 -----------------------------------------------------------------------------------------------
