@@ -1,0 +1,2 @@
+- Refactored restoration.  Should speed up most cases.
+- Added a quick visit box, use the 3rd from the left icon on the bottom

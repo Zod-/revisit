@@ -115,14 +115,7 @@ function Revisit:OnRestore(eType, tSavedData)
 	
 end
 
-function Revisit:OnLoadSettings()
-
-	-- HACK
-	--
-	-- we're only going to wait 6 seconds for
-	-- any saved data restoration to start
-	
-	self.nSettingsPollCount = self.nSettingsPollCount + 1	
+function Revisit:CheckLoaded()
 	self:DebugPrint(string.format("Revist: waited %d seconds.",2*self.nSettingsPollCount))
 
 	-- check to see if the Player Unit is valid yet
@@ -131,31 +124,47 @@ function Revisit:OnLoadSettings()
 	me = GameLib.GetPlayerUnit()
 	if me == nil then
 		self:DebugPrint("Revisit: Char load wait.")
-		return
+		return false
 	end
 	
-	-- Until CRB comes up with a better way to determine
-	-- when the Restore stage is done I need to poll to
-	-- see if the settings are done.  Will give up after
-	-- 6 seconds.
-	if self.nSettingsPollCount < 3 then
 		if not self.bSettingsLoading then
-			self:DebugPrint("Revisit: Waiting for restore to start.")
-			return
+			self:DebugPrint("Revisit: Restore hasn't started yet.  Assuming fresh install.")
+			return true
 		end
 	
 		if not self.bCharSettingsLoaded then
 			self:DebugPrint("Revisit: Waiting for char level settings to restore.")
-			return
+			return false
 		end
 	
 		if not self.bRealmSettingsLoaded then
 			self:DebugPrint("Revisit: Waiting for realm level settings to restore.")
-			return
+			return false
 		end
-	end
 	
-	self.LoadSettingsTimer:Stop()
+	return true
+end
+
+function Revisit:OnLoadSettings()
+
+	-- HACK
+	--
+	-- we're only going to wait 8 seconds for
+	-- any saved data restoration
+	
+	self.nSettingsPollCount = self.nSettingsPollCount + 1	
+
+	-- Until CRB comes up with a better way to determine
+	-- when the Restore stage is done I need to poll to
+	-- see if the settings are done.  Will give up after
+	-- 6 seconds.
+	if self.nSettingsPollCount < 3 and not self:CheckLoaded() then
+		return false
+	end
+		
+	if self.LoadSettingsTimer ~= nil then
+		self.LoadSettingsTimer:Stop()
+	end
 
 	self.sName = me:GetName()
 	
@@ -166,9 +175,6 @@ function Revisit:OnLoadSettings()
 	self:DebugPrint(string.format("Revisit: Faction=%d",self.nFaction))
 	
 	-- Load data
-	-- self.bCharLoaded = true
-	-- self:CheckDataInitialized()
-
 	self:DebugPrint("Revisit:OnLoadSettings: Running!")
 	
 	self:InitSettings()
@@ -187,6 +193,8 @@ function Revisit:OnLoadSettings()
 	self.bDataInited = true
 	
 	Print("Revisit Loaded")
+	
+	return true
 end
 
 -----------------------------------------------------------------------------------------------
@@ -229,13 +237,16 @@ function Revisit:OnDocLoaded()
 
 		-- Do additional Addon initialization here
 		self.friendGrid = self.wndMain:FindChild("FriendsGrid")
-		self.settingsPane = self.wndMain:FindChild("SettingsPane")
-		
+		self.visitPane = self.wndMain:FindChild("VisitPane")
+		self.visitEditBox = self.wndMain:FindChild("VisitEditBox")
+
 		-- be a lil noisy
 		Print("Revisit is loading.")
 		
 		-- Load data
-		self.LoadSettingsTimer = ApolloTimer.Create(2.0, true, "OnLoadSettings", self)
+		if not self:OnLoadSettings() then
+			self.LoadSettingsTimer = ApolloTimer.Create(2.0, true, "OnLoadSettings", self)
+		end
 		
 	end
 end
@@ -416,10 +427,12 @@ end
 
 function Revisit:OnVisitBox( wndHandler, wndControl, eMouseButton )
 	self:DebugPrint("Revisit:OnVisitBox")
+
+	local bShow = self.visitBoxShown ~= true
+	self.visitPane:Show(bShow,true)	
 	
-	local t = Apollo.GetDisplaySize()
-	for k,v in pairs(t) do
-		Print(string.format("Revisit:GDS: key: %s, val: %s",k,v))
+	if bShow then
+		self.visitEditBox:SetFocus()
 	end
 end
 
@@ -449,6 +462,35 @@ function Revisit:OnRemove( wndHandler, wndControl, eMouseButton )
 		self:DebugPrint(string.format("Revisit: removing %s",sFriend))
 		self:Remove(sFriend)
 	end
+end
+
+function Revisit:DoVisitBox()
+	local sFriend= self.visitEditBox:GetText()
+	self:DebugPrint(string.format("Revist:DoVisitBox: %s",sFriend))
+	self.visitPane:Show(false,true)
+	
+	HousingLib.RequestVisitPlayer(sFriend)
+end
+
+function Revisit:OnVisitSubmit( wndHandler, wndControl, strText )
+	self:DebugPrint("Revisit:OnVisitSubmit")
+	self:DoVisitBox()
+end
+
+function Revisit:OnVisitSubmitBtn( wndHandler, wndControl, eMouseButton )
+	self:DebugPrint("Revisit:OnVisitSubmitBtn")
+	self:DoVisitBox()
+end
+
+function Revisit:OnVisitBoxShow( wndHandler, wndControl )
+	self:DebugPrint("Revisit:OnVisitBoxShow")
+	self.visitBoxShown = true
+end
+
+function Revisit:OnVisitBoxHide( wndHandler, wndControl )
+	self:DebugPrint("Revisit:OnVisitBoxHide")
+	self.visitEditBox:SetText("")
+	self.visitBoxShown = false
 end
 
 ---------------------------------------------------------------------------------------------------
