@@ -202,6 +202,7 @@ end
 -----------------------------------------------------------------------------------------------
 function Revisit:OnLoad()
     -- load our form file
+	Apollo.LoadSprites("RevisitSprite.xml", "RevisitSprite")
 	self.xmlDoc = XmlDoc.CreateFromFile("Revisit.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
 end
@@ -233,6 +234,9 @@ function Revisit:OnDocLoaded()
 		-- Register handlers for events, slash commands and timer, etc.
 		-- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
 		Apollo.RegisterEventHandler("ChangeWorld", "OnChangeWorld", self)
+		Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
+		Apollo.RegisterEventHandler("ToggleAddon_Revisit", "OnRevisitOn", self)
+
 		Apollo.RegisterSlashCommand("revisit", "OnRevisitOn", self)
 
 		-- Do additional Addon initialization here
@@ -249,6 +253,10 @@ function Revisit:OnDocLoaded()
 		end
 		
 	end
+end
+
+function Revisit:OnInterfaceMenuListHasLoaded()
+	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Revisit", {"ToggleAddon_Revisit", "", "spr_Revisit"})
 end
 
 -----------------------------------------------------------------------------------------------
@@ -272,8 +280,10 @@ function Revisit:OnRevisitOn(...)
 			i=i+1
 		end
 		if i==0 then
-			self.wndMain:Invoke() -- show the window
-			self.tWindowData.nOpen = true
+			if HousingLib.IsHousingWorld() and not self.wndMain:IsShown() then
+				self.wndMain:Invoke() -- show the window
+				self.tWindowData.nOpen = true
+			end
 		elseif i<2 or tTok[0] ~= "add" then
 			Print("USAGE: /revisit add firstname [lastname]")
 		elseif i==2 then
@@ -284,8 +294,15 @@ function Revisit:OnRevisitOn(...)
 			self:Add(string.format("%s %s",tTok[1],tTok[2]))
 		end
 	else
-		self.wndMain:Invoke() -- show the window
-		self.tWindowData.nOpen = true
+		if HousingLib.IsHousingWorld() then
+			if self.wndMain:IsShown() then
+				self.wndMain:Close() -- show the window
+				self.tWindowData.nOpen = false
+			else
+				self.wndMain:Invoke() -- show the window
+				self.tWindowData.nOpen = true
+			end
+		end
 	end
 end
 

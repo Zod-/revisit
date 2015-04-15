@@ -1,2 +1,25 @@
-- Refactored restoration.  Should speed up most cases.
-- Added a quick visit box, use the 3rd from the left icon on the bottom
+<b>v1.0.3 release 2015-04-15</b><br>
+<ul>
+<li>Changed the style used by the grid control so the scrollbar shows up.</li>
+<li>Registers with the Interface menu, can be now be pinned.</li>
+<li>Spiffy new custom icon.</li>
+<li>Title bar now reads "Revisit" instead of "Revist"
+</ul>
+
+<br><b>v1.0.2 release 2015-04-03</b><br>
+<ul>
+<li>Refactored restoration.  Should speed up most cases.</li>
+<li>Added a quick visit box, use the 3rd from the left icon on the bottom</li>
+</ul>
+
+<br><b>v1.0.1 release 2015-03-31</b><br>
+<ul>
+<li>Refactored load, fixes a crash bug on fresh clients.</li>
+<li>Implemented settings</li>
+<li>Implemented window lock</li>
+</ul>
+
+<br><b>v1.0.0 release 2015-03-29</b><br>
+<ul>
+<li>Initial release of the Revisit Addon</li>
+</ul>
