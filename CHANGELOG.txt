@@ -1,3 +1,8 @@
+<b>v1.0.4 release 2015-05-05</b><br>
+<ul>
+<li>Bumped API version to 10
+</ul>
+
 <b>v1.0.3 release 2015-04-15</b><br>
 <ul>
 <li>Changed the style used by the grid control so the scrollbar shows up.</li>
