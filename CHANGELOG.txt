@@ -1,3 +1,10 @@
+<b>v1.0.5 release 2015-08-31</b><br>
+<ul>
+<li>OneVersion support
+<li>Title bar reflects the version
+<li>/revisit firstname [lastname] will port you to the target's plot if it can
+</ul>
+
 <b>v1.0.4 release 2015-05-05</b><br>
 <ul>
 <li>Bumped API version to 10

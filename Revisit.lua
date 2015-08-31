@@ -34,6 +34,10 @@ local Revisit = {}
 
 local knSaveVersion = 2
 
+-- OneVersion Support
+local Major, Minor, Patch, Suffix = 1, 0, 5, 0
+local REVISIT_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
@@ -243,6 +247,9 @@ function Revisit:OnDocLoaded()
 		self.friendGrid = self.wndMain:FindChild("FriendsGrid")
 		self.visitPane = self.wndMain:FindChild("VisitPane")
 		self.visitEditBox = self.wndMain:FindChild("VisitEditBox")
+		
+		-- update the title
+		self.wndMain:FindChild("Title"):SetText(string.format("Revisit v%s",REVISIT_CURRENT_VERSION))
 
 		-- be a lil noisy
 		Print("Revisit is loading.")
@@ -257,6 +264,7 @@ end
 
 function Revisit:OnInterfaceMenuListHasLoaded()
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Revisit", {"ToggleAddon_Revisit", "", "spr_Revisit"})
+	Event_FireGenericEvent("OneVersion_ReportAddonInfo", "Revisit", Major, Minor, Patch)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -284,14 +292,29 @@ function Revisit:OnRevisitOn(...)
 				self.wndMain:Invoke() -- show the window
 				self.tWindowData.nOpen = true
 			end
-		elseif i<2 or tTok[0] ~= "add" then
-			Print("USAGE: /revisit add firstname [lastname]")
-		elseif i==2 then
-			self:DebugPrint(string.format("arg2: %s %s",tTok[0],tTok[1]))
-			self:Add(tTok[1])
+		elseif i<1 or tTok[0] == "help" then
+			Print("USAGE: /revisit firstname [lastname]       (visit player)")
+			Print("USAGE: /revisit visit firstname [lastname] (visit player)")
+			Print("USAGE: /revisit add firstname [lastname]   (add player to list)")
+		elseif tTok[0] == "add" then
+			value=""
+			if i==2 then
+				value=tTok[1]
+			else
+				value=string.format("%s %s",tTok[1],tTok[2])
+			end
+			self:DebugPrint(string.format("adding: %s",value))
+			self:Add(value)
+		elseif tTok[0] == "visit" then
+			-- skip 'visit', 1 indexed
+			value=table.concat(tTok," ",1)
+			self:DebugPrint(string.format("visiting(1): %s",value))
+			HousingLib.RequestVisitPlayer(value)
 		else
-			self:DebugPrint(string.format("arg2: %s %s %s",tTok[0],tTok[1],tTok[2]))
-			self:Add(string.format("%s %s",tTok[1],tTok[2]))
+			-- 0 indexed
+			value=table.concat(tTok," ",0)
+			self:DebugPrint(string.format("visiting(2): %s",value))
+			HousingLib.RequestVisitPlayer(value)
 		end
 	else
 		if HousingLib.IsHousingWorld() then
