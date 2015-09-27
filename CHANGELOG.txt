@@ -1,3 +1,10 @@
+<b>v1.1.0 release 2015-09-26</b><br>
+<ul>
+<li>Speculative fix for Issue #2 friendList Dominion index screwup 
+<li>Added a Notes field
+<li>Save data version migration functions (internal)
+</ul>
+
 <b>v1.0.5 release 2015-08-31</b><br>
 <ul>
 <li>OneVersion support

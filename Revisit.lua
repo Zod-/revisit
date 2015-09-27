@@ -32,10 +32,10 @@ local Revisit = {}
 -----------------------------------------------------------------------------------------------
 -- e.g. local kiExampleVariableMax = 999
 
-local knSaveVersion = 2
+local knSaveVersion = 3
 
 -- OneVersion Support
-local Major, Minor, Patch, Suffix = 1, 0, 5, 0
+local Major, Minor, Patch, Suffix = 1, 1, 0, 0
 local REVISIT_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 -----------------------------------------------------------------------------------------------
@@ -53,6 +53,7 @@ function Revisit:new(o)
 		friendList = {
 			[0] = {},
 			[1] = {},
+			[2] = {},
 		}
 	}
 	
@@ -109,12 +110,16 @@ function Revisit:OnRestore(eType, tSavedData)
 	self:DebugPrint(string.format("Revisit:OnRestore: %d",eType))
 	self.bSettingsLoading = true
 	
+	if eType == GameLib.CodeEnumAddonSaveLevel.Character then
+		self.bCharSettingsLoaded = true
+	elseif eType == GameLib.CodeEnumAddonSaveLevel.Character then
+		self.bRealmSettingsLoaded = true
+	end
+	
 	if tSavedData and eType == GameLib.CodeEnumAddonSaveLevel.Character then
 		self.tWindowData = tSavedData
-		self.bCharSettingsLoaded = true
-	elseif tSavedData and tSavedData.nSaveVersion == knSaveVersion then
+	elseif tSavedData and eType == GameLib.CodeEnumAddonSaveLevel.Realm then
 		self.tSavedData = tSavedData
-		self.bRealmSettingsLoaded = true
 	end
 	
 end
@@ -181,6 +186,7 @@ function Revisit:OnLoadSettings()
 	-- Load data
 	self:DebugPrint("Revisit:OnLoadSettings: Running!")
 	
+	self:CheckVersion()
 	self:InitSettings()
 	self:UpdateFriendGrid()
 	
@@ -247,6 +253,8 @@ function Revisit:OnDocLoaded()
 		self.friendGrid = self.wndMain:FindChild("FriendsGrid")
 		self.visitPane = self.wndMain:FindChild("VisitPane")
 		self.visitEditBox = self.wndMain:FindChild("VisitEditBox")
+		self.notePane = self.wndMain:FindChild("NotePane")
+		self.noteEditBox = self.wndMain:FindChild("NoteEditBox")
 		
 		-- update the title
 		self.wndMain:FindChild("Title"):SetText(string.format("Revisit v%s",REVISIT_CURRENT_VERSION))
@@ -379,7 +387,7 @@ function Revisit:Add(sOwner)
 	if self.tSavedData.friendList[self.nFaction][sOwner] ~= nil then
 		Print(string.format("Revisit: %s is already on the list!",sOwner))
 	else
-		self.tSavedData.friendList[self.nFaction][sOwner] = true
+		self.tSavedData.friendList[self.nFaction][sOwner] = { note="",tabs="" }
 		self:UpdateFriendGrid()
 	end
 end
@@ -392,6 +400,10 @@ function Revisit:Remove(sOwner)
 		self:UpdateFriendGrid()
 	end
 end
+
+-----------------------------------------------------------------------------------------------
+-- Revisit Saved Data Functions
+-----------------------------------------------------------------------------------------------
 
 function Revisit:InitSettings()
 	local debugCB = self.wndSettings:FindChild("DebugCB")
@@ -417,6 +429,8 @@ function Revisit:UpdateFriendGrid()
 		if self.sName ~= v then
 			self.friendGrid:AddRow("")
 			self.friendGrid:SetCellText(self.nCount,1,v)
+			local note = self.tSavedData.friendList[self.nFaction][v]["note"]
+			self.friendGrid:SetCellText(self.nCount,2,note)
 			self.nCount=self.nCount+1
 		end
 	end
@@ -424,6 +438,53 @@ function Revisit:UpdateFriendGrid()
 	-- TODO: Restore the selected name if it still exists?
 	self.friendGrid:SetCurrentRow(1)
 	
+end
+
+-- Saved data translators, this function upgrades to current schema in steps
+function Revisit:CheckVersion()
+	if(self.tWindowData.nSaveVersion == 1) then
+		self:MigrateV1toV2()
+	end
+
+	if(self.tWindowData.nSaveVersion == 2) then
+		self:MigrateCharV2toV3()
+	end	
+	
+	if(self.tSavedData.nSaveVersion == 2) then
+		self:MigrateRealmV2toV3()
+	end	
+	-- etc.
+end
+
+function Revisit:MigrateV1toV2()
+	-- This is BAD! Do not filter!
+	Print("Revisit:WARNING: V1 save data detected.  No migration possible!")
+end
+
+function Revisit:MigrateCharV2toV3()
+	-- Warn Player.  Do not filter!
+	Print("Revisit:NOTICE: Migrating Char Save data from V2 to V3")
+
+		-- tWindowData (character)
+	self.tWindowData.nSaveVersion = 3
+end
+
+function Revisit:MigrateRealmV2toV3()
+	-- Warn Player.  Do not filter!
+	Print("Revisit:NOTICE: Migrating Realm Save data from V2 to V3")
+	
+	-- tSavedData (realm)
+	self.tSavedData.nSaveVersion = 3
+	
+	-- iterate factions
+	for f=1,2,1 do
+		local flist = {}
+		for n in pairs(self.tSavedData.friendList[f]) do
+			v3val = { note="",tabs="" }
+			flist[n] = v3val
+		end
+		self.tSavedData.friendList[f] = flist
+	end
 end
 
 -----------------------------------------------------------------------------------------------
@@ -473,6 +534,19 @@ function Revisit:OnVisitBox( wndHandler, wndControl, eMouseButton )
 	
 	if bShow then
 		self.visitEditBox:SetFocus()
+	end
+end
+
+function Revisit:OnNoteBox( wndHandler, wndControl, eMouseButton )
+	self:DebugPrint("Revisit:OnNoteBox")
+
+	local bShow = self.noteBoxShown ~= true
+	self.notePane:Show(bShow,true)	
+	
+	if bShow then
+		local sNote = self:GetSelectedNote()
+		self.noteEditBox:SetText(sNote)
+		self.noteEditBox:SetFocus()
 	end
 end
 
@@ -531,6 +605,63 @@ function Revisit:OnVisitBoxHide( wndHandler, wndControl )
 	self:DebugPrint("Revisit:OnVisitBoxHide")
 	self.visitEditBox:SetText("")
 	self.visitBoxShown = false
+end
+
+function Revisit:DoNoteBox()
+	row = self.friendGrid:GetCurrentRow()
+	if row == nil then
+		self:DebugPrint("Revisit:DoNoteBox: row is nil")
+	else
+		local sFriend = self.friendGrid:GetCellText(row,1)
+		local sNote = self.noteEditBox:GetText()
+		self:DebugPrint(string.format("Revist:DoNoteBox: '%s' '%s'",sFriend,sNote))
+		self.tSavedData.friendList[self.nFaction][sFriend]["note"] = sNote
+		-- self:UpdateWindowData()
+		self.friendGrid:SetCellText(row,2,sNote)
+	end
+
+	self.notePane:Show(false,true)
+end
+
+function Revisit:OnNoteSubmit( wndHandler, wndControl, strText )
+	self:DebugPrint("Revisit:OnNoteSubmit")
+	self:DoNoteBox()
+end
+
+function Revisit:OnNoteSubmitBtn( wndHandler, wndControl, eMouseButton )
+	self:DebugPrint("Revisit:OnNoteSubmitBtn")
+	self:DoNoteBox()
+end
+
+function Revisit:OnNoteBoxShow( wndHandler, wndControl )
+	self:DebugPrint("Revisit:OnNoteBoxShow")
+	self.noteBoxShown = true
+end
+
+function Revisit:OnVisitBoxHide( wndHandler, wndControl )
+	self:DebugPrint("Revisit:OnNoteBoxHide")
+	self.noteEditBox:SetText("")
+	self.noteBoxShown = false
+end
+
+---------------------------------------------------------------------------------------------------
+-- Utility Functions
+---------------------------------------------------------------------------------------------------
+
+function Revisit:GetSelectedOwner()
+	row = self.friendGrid:GetCurrentRow()
+	if row == nil then
+		return nil
+	end
+	return self.friendGrid:GetCellText(row,1)
+end
+
+function Revisit:GetSelectedNote()
+	local sOwner = self:GetSelectedOwner()
+	if sOwner == nil then
+		return nil
+	end
+	return self.tSavedData.friendList[self.nFaction][sOwner]["note"]
 end
 
 ---------------------------------------------------------------------------------------------------
