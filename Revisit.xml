@@ -59,8 +59,8 @@
                 <Event Name="ButtonSignal" Function="OnNoteSubmitBtn"/>
             </Control>
             <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="0" BAnchorOffset="20" RelativeToClient="1" Font="CRB_InterfaceMedium" Template="Default" Name="NoteTitle" BGColor="ff101010" TextColor="ffc0c0c0" DT_VCENTER="1" DT_CENTER="1" NewControlDepth="2" TextId="Friends_UpdateNote" Text="" TooltipColor="" Picture="1" IgnoreMouse="1" NewWindowDepth="1" Sprite="BasicSprites:WhiteFill"/>
-            <Event Name="WindowShow" Function="OnVisitBoxShow"/>
-            <Event Name="WindowHide" Function="OnVisitBoxHide"/>
+            <Event Name="WindowShow" Function="OnNoteBoxShow"/>
+            <Event Name="WindowHide" Function="OnNoteBoxHide"/>
         </Control>
     </Form>
     <Form Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="0" RAnchorOffset="350" BAnchorPoint="0" BAnchorOffset="280" RelativeToClient="1" Font="CRB_Interface9" Text="" BGColor="80303030" TextColor="UI_WindowTextDefault" Template="Default" TooltipType="OnCursor" Name="ConfigForm" Border="1" Picture="1" SwallowMouseClicks="1" Moveable="0" Escapable="1" Overlapped="0" TooltipColor="" Visible="0" TransitionShowHide="1" Sprite="BasicSprites:WhiteFill">

@@ -1,3 +1,12 @@
+<b>v1.1.1 release 2015-09-29</b><br>
+<ul>
+<li>Bumped API to 11 
+<li>Fix for Issue #3
+<li>Events for opening and closing the Note pane didn't get set properly and was causing problems for the Visit pane.
+<li>Fix for reported crash in the 2 to 3 migration
+<li>Fix for a related crash when adding a Dominion shortcut to an empty list
+</ul>
+
 <b>v1.1.0 release 2015-09-26</b><br>
 <ul>
 <li>Speculative fix for Issue #2 friendList Dominion index screwup 

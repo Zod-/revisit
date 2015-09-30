@@ -35,7 +35,7 @@ local Revisit = {}
 local knSaveVersion = 3
 
 -- OneVersion Support
-local Major, Minor, Patch, Suffix = 1, 1, 0, 0
+local Major, Minor, Patch, Suffix = 1, 1, 1, 0
 local REVISIT_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 -----------------------------------------------------------------------------------------------
@@ -203,6 +203,10 @@ function Revisit:OnLoadSettings()
 	self.bDataInited = true
 	
 	Print("Revisit Loaded")
+	
+	if(self.tSavedData.friendList[self.nFaction] == nil) then
+		self.tSavedData.friendList[self.nFaction] = {}
+	end
 	
 	return true
 end
@@ -416,10 +420,13 @@ end
 
 function Revisit:UpdateFriendGrid()
 	local flist = {}
-	for n in pairs(self.tSavedData.friendList[self.nFaction]) do
-		table.insert(flist,n)
-	end
 	
+	if(self.tSavedData.friendList[self.nFaction] ~= nil) then
+		for n in pairs(self.tSavedData.friendList[self.nFaction]) do
+			table.insert(flist,n)
+		end
+	end
+		
 	table.sort(flist)
 	
 	self.friendGrid:DeleteAll()
@@ -479,9 +486,11 @@ function Revisit:MigrateRealmV2toV3()
 	-- iterate factions
 	for f=1,2,1 do
 		local flist = {}
-		for n in pairs(self.tSavedData.friendList[f]) do
-			v3val = { note="",tabs="" }
-			flist[n] = v3val
+		if(self.tSavedData.friendList[f] ~= nil) then
+			for n in pairs(self.tSavedData.friendList[f]) do
+				v3val = { note="",tabs="" }
+				flist[n] = v3val
+			end
 		end
 		self.tSavedData.friendList[f] = flist
 	end
@@ -540,11 +549,19 @@ end
 function Revisit:OnNoteBox( wndHandler, wndControl, eMouseButton )
 	self:DebugPrint("Revisit:OnNoteBox")
 
+	local sNote = nil
 	local bShow = self.noteBoxShown ~= true
+	
+	if bShow then
+		sNote = self:GetSelectedNote()
+		if(sNote == nil) then
+			bShow = false
+		end
+	end
+	
 	self.notePane:Show(bShow,true)	
 	
 	if bShow then
-		local sNote = self:GetSelectedNote()
 		self.noteEditBox:SetText(sNote)
 		self.noteEditBox:SetFocus()
 	end
@@ -638,7 +655,7 @@ function Revisit:OnNoteBoxShow( wndHandler, wndControl )
 	self.noteBoxShown = true
 end
 
-function Revisit:OnVisitBoxHide( wndHandler, wndControl )
+function Revisit:OnNoteBoxHide( wndHandler, wndControl )
 	self:DebugPrint("Revisit:OnNoteBoxHide")
 	self.noteEditBox:SetText("")
 	self.noteBoxShown = false
