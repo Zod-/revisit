@@ -35,7 +35,7 @@ local Revisit = {}
 local knSaveVersion = 3
 
 -- OneVersion Support
-local Major, Minor, Patch, Suffix = 1, 1, 2, 0
+local Major, Minor, Patch, Suffix = 1, 1, 3, 0
 local REVISIT_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 -----------------------------------------------------------------------------------------------
