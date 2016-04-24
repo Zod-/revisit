@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="PlasmaJohn" APIVersion="11" Name="Revisit" Description="Shortcuts to visit friends" Version="">
+<Addon Author="PlasmaJohn" APIVersion="12" Name="Revisit" Description="Shortcuts to visit friends" Version="">
     <Script Name="Revisit.lua"/>
     <Form Name="Revisit.xml"/>
 </Addon>

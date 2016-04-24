@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------------------
 -- Client Lua Script for Revisit
--- Copyright (c) 2015 PlasmaJohn.
+-- Copyright (c) 2016 PlasmaJohn.
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy 
 -- of this software and associated documentation files (the "Software"), to deal 
@@ -25,7 +25,7 @@ require "Window"
 -----------------------------------------------------------------------------------------------
 -- Revisit Module Definition
 -----------------------------------------------------------------------------------------------
-local Revisit = {} 
+local Revisit = {}
  
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -35,7 +35,7 @@ local Revisit = {}
 local knSaveVersion = 3
 
 -- OneVersion Support
-local Major, Minor, Patch, Suffix = 1, 1, 1, 0
+local Major, Minor, Patch, Suffix = 1, 1, 2, 0
 local REVISIT_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 -----------------------------------------------------------------------------------------------
@@ -198,7 +198,9 @@ function Revisit:OnLoadSettings()
 	local t = Apollo.GetDisplaySize()
 	self.wndSettings:Move((t.nWidth-350)/2,(t.nHeight-280)/2,350,280)
 	
-	self:CheckOpen()
+	if HousingLib.IsHousingWorld() then
+		self:CheckOpen()
+	end
 	
 	self.bDataInited = true
 	
@@ -341,6 +343,7 @@ function Revisit:OnRevisitOn(...)
 	end
 end
 
+-- NOTE: Before calling this, check HousingLib.IsHousingWOrld()
 function Revisit:CheckOpen()
 	if self.tWindowData.nOpen == true and not self.wndMain:IsShown() then
 		self.wndMain:Invoke()
