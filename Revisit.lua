@@ -32,6 +32,7 @@ local Revisit = {}
 -----------------------------------------------------------------------------------------------
 -- e.g. local kiExampleVariableMax = 999
 
+local me = nil
 local knSaveVersion = 3
 
 -- OneVersion Support
